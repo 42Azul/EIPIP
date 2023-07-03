@@ -1,0 +1,11 @@
+Package: EIPIP
+Type: Package
+Title: Enhanced Imbalanced Classification with IPIP and EIPIP
+Version: 0.1.0
+Author: Fernando de la Gándara Fernández
+Maintainer: Fernando de la Gándara Fernández <ferdelagandara@gmail.com>
+Description: This package introduces the class and functional implementation of the IPIP and its exhaustive variant, EIPIP. The original IPIP algorithm was developed to tackle imbalanced classification problems, with a focus on ensembling techniques for superior performance on imbalanced datasets. It defines the quantity of subsets, the maximum number of models within each individual ensemble and generates balanced subsets based on a specified ratio between the majority class and the minority ones. 
+    The package also introduces an exhaustive variant of the IPIP, named EIPIP, which changes the method of model selection from sequential to parallel, running all models and determining which ensemble of models provides the best metric. This package aims to equip users with a tool to manage and analyze imbalanced datasets more effectively, offering a comprehensive solution to generate, evaluate and optimize ensemble models.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true

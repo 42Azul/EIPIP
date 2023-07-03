@@ -1,0 +1,101 @@
+---
+title: "Example: Using EIPIP Package"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source("../R/EIPIP.R")
+library(caret)
+library(MLmetrics)
+library(mlbench) # To load the BreastCancer dataset
+```
+
+Firstly, we define a simple logistic regression as a base learner:
+
+```{r base_learner}
+# Define one or more of your base learner functions
+learner <- function(df.train, metrics, OUTPUT, metric_optimize) {
+    tC <- trainControl(
+      summaryFunction = metrics,
+      allowParallel = TRUE,
+      classProbs = TRUE
+    )
+    
+    rlog <- train(as.formula(sprintf("%s ~.", OUTPUT)),
+      data = df.train,
+      method = "glmnet",
+      family = 'binomial',
+      metric = metric_optimize,
+      maximize = TRUE,
+      trControl = tC
+    )
+    
+    return(rlog)
+}
+
+```
+
+Next, we load the BreastCancer data, and split it into a training set and a validation set:
+
+```{r prepare_data}
+# Load BreastCancer data
+data(BreastCancer)
+data <- BreastCancer
+data <- data[, -c(1)]
+data$Class <- factor(data$Class) # Making sure Class is a factor
+data <- na.omit(data)
+# Split into train and test set
+indices <- createDataPartition(data$Class, p=0.8, list=FALSE)
+train_set <- data[indices, ]
+test_set <- data[-indices, ]
+
+# Further split the train_set into train and validation set
+indices <- createDataPartition(train_set$Class, p=0.8, list=FALSE)
+val_set <- train_set[-indices,]
+train_set <- train_set[indices, ]
+```
+
+Now we define the metric to be used and the metrics function.
+
+```{r}
+metrics <- function(data, lev = levels(as.factor(data$obs)), model = NULL){
+    sensi = sensitivity(data[, "pred"],data[, "obs"],positive="malignant",negative="benign")
+
+    met <- c(
+    KAPPA = psych::cohen.kappa(cbind(data[, "obs"],data[, "pred"]))$kappa,
+    SENS = sensi,
+    BAL_ACC = ( sensi + specificity(data[, "pred"], data[, "obs"],positive="malignant",negative="benign"))/2
+    )
+
+  return(met)
+}
+```
+
+Now we are ready to use the EIPIP class. We initialize an instance of the EIPIP class, train the model, and make predictions:
+
+```{r eipip_example, warning=FALSE}
+# Initialize EIPIP class
+EIPIP_instance <- EIPIP$new(
+  OUTPUT_VAR = "Class",
+  OUTPUT_MIN = "malignant",
+  OUTPUT_MAJ = "benign",
+  conf = list(learner, learner, learner, learner, learner, learner, learner),
+  metrics = metrics,
+  TRAIN_METRIC = "BAL_ACC",
+  exhaustive = FALSE
+)
+
+# Train the model
+EIPIP_instance$train(train_set, val_set)
+
+# Make predictions
+predictions <- EIPIP_instance$predict(test_set)
+```
+
+Finally, we can evaluate the model performance over the stablished metrics in a test set.
+
+```{r performance_evaluation}
+
+EIPIP_instance$metricTest(test_set)
+```
